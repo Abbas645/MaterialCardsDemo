@@ -71,7 +71,7 @@ public class MainActivity extends Activity {
             mLayoutManager = new LinearLayoutManager(this.getActivity());
             mRecyclerView.setLayoutManager(mLayoutManager);
 
-            String[] myDataset = {"Ammar", "Githam"};
+            String[] myDataset = {"Testing", "Testing"};
 
             // specify an adapter (see also next example)
             mAdapter = new MyAdapter(myDataset);
