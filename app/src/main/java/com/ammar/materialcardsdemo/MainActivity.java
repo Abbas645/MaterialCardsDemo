@@ -2,9 +2,12 @@ package com.ammar.materialcardsdemo;
 
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
+import android.animation.AnimatorSet;
+import android.animation.ObjectAnimator;
 import android.animation.ValueAnimator;
 import android.app.Activity;
 import android.app.Fragment;
+import android.graphics.Outline;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -13,12 +16,15 @@ import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewAnimationUtils;
 import android.view.ViewGroup;
+import android.view.ViewTreeObserver;
+import android.view.animation.AnimationSet;
+import android.view.animation.TranslateAnimation;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
-import android.graphics.Outline;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
-import android.view.ViewAnimationUtils;
 
 public class MainActivity extends Activity {
 
@@ -33,7 +39,6 @@ public class MainActivity extends Activity {
                     .commit();
         }
     }
-
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -62,6 +67,8 @@ public class MainActivity extends Activity {
         private RecyclerView mRecyclerView;
         private RecyclerView.Adapter mAdapter;
         private RecyclerView.LayoutManager mLayoutManager;
+        private String[] myDataset;
+        private ImageButton fab;
 
         public PlaceholderFragment() {
         }
@@ -69,12 +76,14 @@ public class MainActivity extends Activity {
         @Override
         public View onCreateView(LayoutInflater inflater, ViewGroup container,
                 Bundle savedInstanceState) {
-            View rootView = inflater.inflate(R.layout.fragment_main, container, false);
+
+            final View rootView = inflater.inflate(R.layout.fragment_main, container, false);
             final FrameLayout frameLayout = (FrameLayout)rootView;
+
             RecyclerView mRecyclerView = (RecyclerView) frameLayout.findViewById(R.id.recyclerView);
             final TextView hiddenTextView = (TextView) frameLayout.findViewById(R.id.hiddenFloatText);
 
-            ImageButton fab = (ImageButton) frameLayout.findViewById(R.id.fab);
+            fab = (ImageButton) frameLayout.findViewById(R.id.fab);
             Outline mOutlineCircle = new Outline();
             int shapeSize = getResources().getDimensionPixelSize(R.dimen.priamry_fab_height);
             mOutlineCircle.setRoundRect(0, 0, shapeSize, shapeSize, shapeSize / 2);
@@ -91,28 +100,48 @@ public class MainActivity extends Activity {
                     if (!view.isSelected()) {
 
                         view.setSelected(true);
-                        view.setImageResource(R.drawable.ic_action_accept);
+                        view.setImageResource(R.drawable.ic_fab_accept);
+
+                        int cx = 0;
+                        int cy = 0;
+                        int finalRadius = 0;
+
+                        if (myDataset.length == 0)
+                        {
+                            //FAB is in the center of screen so moving to bottom right corner
+                            Log.d("hiddentTextView", hiddenTextView.getX() + " " + hiddenTextView.getY() + " " + hiddenTextView.getTop() + " " + hiddenTextView.getBottom());
+                            cx = hiddenTextView.getLeft() + hiddenTextView.getWidth()/2;
+                            cy = hiddenTextView.getTop() + hiddenTextView.getHeight() / 2;
+
+                            Log.d("Values", cx + " " + cy);
+
+                            int x = rootView.getWidth()/2 - fab.getWidth()/2 - Utils.dpToPx(getActivity(), 16);
+                            int y = rootView.getHeight()/2 - fab.getHeight()/2 - Utils.dpToPx(getActivity(), 16);
+
+                            ObjectAnimator translateX= ObjectAnimator.ofFloat(fab, "translationX", 0, x);
+                            ObjectAnimator translateY= ObjectAnimator.ofFloat(fab, "translationY", 0, y);
+                            AnimatorSet animatorSet = new AnimatorSet();
+                            animatorSet.playTogether(translateX, translateY);
+                            animatorSet.start();
+
+                            finalRadius = (hiddenTextView.getWidth()>hiddenTextView.getHeight())?hiddenTextView.getWidth():hiddenTextView.getHeight();
+                        }
+                        else
+                        {
+                            finalRadius = (int) Math.sqrt((hiddenTextView.getWidth() * hiddenTextView.getWidth()) + (hiddenTextView.getHeight() * hiddenTextView.getHeight()));
+                        }
 
                         // get the center for the clipping circle
                         //int cx = (hiddenTextView .getLeft() + hiddenTextView .getRight()) / 2;
                         //int cy = (hiddenTextView .getTop() + hiddenTextView .getBottom()) / 2;
 
-                        //Log.d("TextView", cx + " " + cy);
-
-                        // get the final radius for the clipping circle
-                        int finalRadius = (int) Math.sqrt((hiddenTextView.getWidth() * hiddenTextView.getWidth()) + (hiddenTextView.getHeight() * hiddenTextView.getHeight()));
-
-                        Log.d("TextView", "Radius: " + finalRadius);
-
-                        // create and start the animator for this view
-                        // (the start radius is zero)
                         hiddenTextView.setVisibility(View.VISIBLE);
-                        ValueAnimator anim = ViewAnimationUtils.createCircularReveal(hiddenTextView , 0, 0, 0, finalRadius);
+                        ValueAnimator anim = ViewAnimationUtils.createCircularReveal(hiddenTextView , cx, cy, 0, finalRadius);
                         anim.start();
                     }
                     else {
                         view.setSelected(false);
-                        view.setImageResource(R.drawable.ic_action_new);
+                        view.setImageResource(R.drawable.ic_fab_new);
 
                         // get the center for the clipping circle
                         int cx = hiddenTextView.getRight();
@@ -145,12 +174,39 @@ public class MainActivity extends Activity {
             // use a linear layout manager
             mLayoutManager = new LinearLayoutManager(this.getActivity());
             mRecyclerView.setLayoutManager(mLayoutManager);
-
-            String[] myDataset = {"Testing", "Testing"};
-
-            // specify an adapter (see also next example)
+            myDataset = new String[]{};
             mAdapter = new MyAdapter(myDataset);
             mRecyclerView.setAdapter(mAdapter);
+
+            ViewTreeObserver vto = rootView.getViewTreeObserver();
+
+            vto.addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+                @Override
+                public void onGlobalLayout() {
+
+                    RelativeLayout.LayoutParams layoutParams = (RelativeLayout.LayoutParams) fab.getLayoutParams();
+
+                    if (myDataset.length == 0)
+                    {
+                        //Moving FAB to center
+                        int x = -(rootView.getWidth() / 2 - fab.getWidth() / 2);
+                        int y = -(rootView.getHeight() / 2 - fab.getHeight() / 2);
+                        layoutParams.setMargins(-x, -y, -x, -y);
+                        fab.setLayoutParams(layoutParams);
+                    }
+                    else
+                    {
+                        layoutParams.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.TRUE);
+                        layoutParams.addRule(RelativeLayout.ALIGN_PARENT_RIGHT, RelativeLayout.TRUE);
+                        layoutParams.setMargins(0, 0, Utils.dpToPx(getActivity(), 16), Utils.dpToPx(getActivity(), 16));
+                        fab.setLayoutParams(layoutParams);
+                    }
+
+                    ViewTreeObserver obs = rootView.getViewTreeObserver();
+                    obs.removeOnGlobalLayoutListener(this);
+                }
+            });
+
             return rootView;
         }
     }
