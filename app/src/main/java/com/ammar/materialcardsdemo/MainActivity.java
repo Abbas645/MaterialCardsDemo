@@ -83,6 +83,38 @@ public class MainActivity extends Activity {
             RecyclerView mRecyclerView = (RecyclerView) frameLayout.findViewById(R.id.recyclerView);
             final TextView hiddenTextView = (TextView) frameLayout.findViewById(R.id.hiddenFloatText);
 
+            mRecyclerView.setHasFixedSize(true);
+
+            // use a linear layout manager
+            mLayoutManager = new LinearLayoutManager(this.getActivity());
+            mRecyclerView.setLayoutManager(mLayoutManager);
+            myDataset = new String[]{"Testing", "Testing"};
+            mAdapter = new MyAdapter(myDataset);
+            mRecyclerView.setAdapter(mAdapter);
+
+            SwipeDismissRecyclerViewTouchListener touchListener =
+                    new SwipeDismissRecyclerViewTouchListener(
+                            mRecyclerView,
+                            new SwipeDismissRecyclerViewTouchListener.DismissCallbacks() {
+                                @Override
+                                public boolean canDismiss(int position) {
+                                    return true;
+                                }
+
+                                @Override
+                                public void onDismiss(RecyclerView recyclerView, int[] reverseSortedPositions) {
+
+                                    for (int position : reverseSortedPositions) {
+                                        recyclerView.removeViewAt(position);
+                                    }
+                                }
+                            });
+
+            mRecyclerView.setOnTouchListener(touchListener);
+            // Setting this scroll listener is required to ensure that during ListView scrolling,
+            // we don't look for swipes.
+            mRecyclerView.setOnScrollListener(touchListener.makeScrollListener());
+
             fab = (ImageButton) frameLayout.findViewById(R.id.fab);
             Outline mOutlineCircle = new Outline();
             int shapeSize = getResources().getDimensionPixelSize(R.dimen.priamry_fab_height);
@@ -168,15 +200,6 @@ public class MainActivity extends Activity {
                     }
                 }
             });
-
-            mRecyclerView.setHasFixedSize(true);
-
-            // use a linear layout manager
-            mLayoutManager = new LinearLayoutManager(this.getActivity());
-            mRecyclerView.setLayoutManager(mLayoutManager);
-            myDataset = new String[]{};
-            mAdapter = new MyAdapter(myDataset);
-            mRecyclerView.setAdapter(mAdapter);
 
             ViewTreeObserver vto = rootView.getViewTreeObserver();
 
